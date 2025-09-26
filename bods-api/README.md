@@ -1,4 +1,4 @@
-# Midland Bus BODS API
+# BODS API
 
 A fully BODS (Bus Open Data Service) compliant API implementing the SIRI-VM (Service Interface for Real-time Information - Vehicle Monitoring) standard for real-time bus location data.
 
