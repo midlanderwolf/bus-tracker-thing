@@ -6,8 +6,11 @@
 - **Test**: `python manage.py test`
 - **Single test**: `python manage.py test tracker.tests.TestClass.test_method`
 - **Migrations**: `python manage.py makemigrations && python manage.py migrate`
-- **Lint**: No dedicated linter configured (consider black/flake8)
-- **API Test**: `python -m pytest bods-api/` (if pytest configured)
+- **Tunnel Setup**: `./setup-tunnels.sh` (Cloudflare tunnels for midlandbus.uk domains)
+- **Tunnel Test**: `./test-tunnels.sh` (Test local services and tunnel connectivity)
+- **BODS API Build**: `cd bods-api && docker-compose build`
+- **BODS API Run**: `cd bods-api && docker-compose up -d`
+- **BODS API Test**: `curl http://localhost:3002/check-status`
 
 ## Code Style Guidelines
 
@@ -29,11 +32,6 @@
 - **Endpoints**: Descriptive docstrings, proper status codes
 - **Error Handling**: Use HTTPException with appropriate status codes
 - **Validation**: Leverage Pydantic validators for complex logic
-
-### Database
-- **Migrations**: Always create migrations for model changes
-- **Indexes**: Add database indexes for frequently queried fields
-- **Constraints**: Use unique_together for composite keys
 
 ### General
 - **Error Handling**: Try/catch blocks, log errors appropriately
