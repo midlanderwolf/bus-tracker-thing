@@ -1,0 +1,641 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Tracking Dashboard</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Tracking Controls</h5>
+            </div>
+            <div class="card-body">
+                <div id="tracking-status" class="mb-3">
+                     {% if active_session %}
+                         <div class="alert alert-success">
+                             <strong>Currently tracking:</strong> {{ active_session.vehicle_ref }}
+                             {% if is_custom_vehicle %}
+                                 <span class="badge bg-info ms-2">Custom Vehicle</span>
+                             {% endif %}
+                         </div>
+                         <button id="stop-tracking" class="btn btn-danger">Stop Tracking</button>
+                     {% else %}
+                         <div class="alert alert-info">
+                             Not currently tracking any vehicle
+                         </div>
+
+                         <!-- Vehicle Selection -->
+                         <div class="mb-3">
+                             <label class="form-label">Vehicle Selection <span class="text-danger">*</span></label>
+                             <div class="alert alert-info py-2 px-3 mb-2">
+                                 <small class="text-muted">
+                                     <strong>Predefined vehicles:</strong> Managed by administrators, appear on maps for all users.<br>
+                                     <strong>Custom vehicles:</strong> One-time entry for special tracking needs.
+                                 </small>
+                             </div>
+                             <div class="mb-2">
+                                 <div class="form-check form-check-inline">
+                                     <input class="form-check-input" type="radio" name="vehicle-type" id="vehicle-predefined" value="predefined" checked>
+                                     <label class="form-check-label" for="vehicle-predefined">
+                                         Use predefined vehicle
+                                     </label>
+                                 </div>
+                                 <div class="form-check form-check-inline">
+                                     <input class="form-check-input" type="radio" name="vehicle-type" id="vehicle-custom" value="custom">
+                                     <label class="form-check-label" for="vehicle-custom">
+                                         Enter custom vehicle
+                                     </label>
+                                 </div>
+                             </div>
+
+                             <!-- Predefined Vehicle Dropdown -->
+                             <div id="predefined-vehicle-section">
+                                 <select class="form-select" id="vehicle-ref">
+                                     <option value="">Select a vehicle...</option>
+                                     {% for vehicle in available_vehicles %}
+                                         <option value="{{ vehicle.vehicle_unique_ref }}">{{ vehicle }}</option>
+                                     {% endfor %}
+                                 </select>
+                             </div>
+
+                             <!-- Custom Vehicle Input -->
+                             <div id="custom-vehicle-section" style="display: none;">
+                                 <input type="text" class="form-control" id="custom-vehicle-ref" placeholder="e.g. BUS001, NCT123, CUSTOM456">
+                                 <div class="form-text text-muted">
+                                     Enter any vehicle reference for one-time tracking. This vehicle won't be saved to the predefined list.
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Trip Loading Section -->
+                         <div class="mb-3">
+                             <label class="form-label">Load Trip Data (Optional)</label>
+                             <div class="input-group">
+                                 <input type="text" class="form-control" id="service-search" placeholder="Search services (e.g. NCTR)">
+                                 <button class="btn btn-outline-secondary" type="button" id="search-services">Search</button>
+                             </div>
+                             <div id="service-results" class="mt-2" style="display: none;">
+                                 <select class="form-select" id="service-select">
+                                     <option value="">Select a service...</option>
+                                 </select>
+                             </div>
+                             <div id="trip-results" class="mt-2" style="display: none;">
+                                 <select class="form-select" id="trip-select">
+                                     <option value="">Select a trip...</option>
+                                 </select>
+                                 <button class="btn btn-sm btn-outline-primary mt-1" type="button" id="load-trip-data">Load Trip Data</button>
+                             </div>
+                         </div>
+
+                         <!-- Journey Configuration -->
+                         <div class="card mb-3">
+                             <div class="card-header">
+                                 <h6 class="mb-0">Journey Configuration</h6>
+                             </div>
+                             <div class="card-body">
+                                 <div class="row">
+                                     <div class="col-md-6">
+                                         <div class="mb-3">
+                                             <label for="line-ref" class="form-label">Line Reference <span class="text-danger">*</span></label>
+                                             <input type="text" class="form-control" id="line-ref" placeholder="e.g. 123" required>
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="direction-ref" class="form-label">Direction <span class="text-danger">*</span></label>
+                                             <select class="form-select" id="direction-ref" required>
+                                                 <option value="">Select direction...</option>
+                                                 <option value="outbound">Outbound</option>
+                                                 <option value="inbound">Inbound</option>
+                                                 <option value="clockwise">Clockwise</option>
+                                                 <option value="anticlockwise">Anti-clockwise</option>
+                                             </select>
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="operator-ref" class="form-label">Operator Reference</label>
+                                             <input type="text" class="form-control" id="operator-ref" placeholder="e.g. NCTR">
+                                         </div>
+                                     </div>
+                                     <div class="col-md-6">
+                                         <div class="mb-3">
+                                             <label for="block-ref" class="form-label">Block Reference</label>
+                                             <input type="text" class="form-control" id="block-ref" placeholder="e.g. BLOCK001">
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="vehicle-journey-ref" class="form-label">Vehicle Journey Reference</label>
+                                             <input type="text" class="form-control" id="vehicle-journey-ref" placeholder="Auto-generated">
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="occupancy" class="form-label">Occupancy</label>
+                                             <select class="form-select" id="occupancy">
+                                                 <option value="">Not specified</option>
+                                                 <option value="seatsAvailable">Seats Available</option>
+                                                 <option value="standingAvailable">Standing Available</option>
+                                                 <option value="full">Full</option>
+                                             </select>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <!-- Origin/Destination -->
+                         <div class="card mb-3">
+                             <div class="card-header">
+                                 <h6 class="mb-0">Origin & Destination</h6>
+                             </div>
+                             <div class="card-body">
+                                 <div class="row">
+                                     <div class="col-md-6">
+                                         <div class="mb-3">
+                                             <label for="origin-ref" class="form-label">Origin Stop Reference</label>
+                                             <input type="text" class="form-control" id="origin-ref" placeholder="ATCO code">
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="origin-name" class="form-label">Origin Name</label>
+                                             <input type="text" class="form-control" id="origin-name" placeholder="Stop name">
+                                         </div>
+                                     </div>
+                                     <div class="col-md-6">
+                                         <div class="mb-3">
+                                             <label for="destination-ref" class="form-label">Destination Stop Reference</label>
+                                             <input type="text" class="form-control" id="destination-ref" placeholder="ATCO code">
+                                         </div>
+                                         <div class="mb-3">
+                                             <label for="destination-name" class="form-label">Destination Name</label>
+                                             <input type="text" class="form-control" id="destination-name" placeholder="Stop name">
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         <button id="start-tracking" class="btn btn-success" disabled>Start Tracking</button>
+                    {% endif %}
+                </div>
+
+                <div id="location-info" class="mt-3">
+                    <h6>Location Information</h6>
+                    <div id="current-position">Waiting for location...</div>
+                    <div id="accuracy" class="text-muted small"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Tracking History</h5>
+            </div>
+            <div class="card-body">
+                <div id="tracking-history">
+                    <p class="text-muted">No recent tracking sessions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Live Map</h5>
+                <small class="text-muted" id="last-updated">Last updated: Never</small>
+            </div>
+            <div class="card-body">
+                <div id="dashboard-map" style="height: 500px;" class="rounded"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let dashboardMap;
+let userMarker;
+let trackingInterval;
+let watchId;
+let currentPosition = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize dashboard map
+    dashboardMap = L.map('dashboard-map').setView([51.505, -0.09], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(dashboardMap);
+
+    // Setup event listeners
+    setupEventListeners();
+
+    // Start location tracking
+    startLocationTracking();
+
+    // Update map periodically
+    setInterval(updateMap, 10000);
+
+    // Set initial last updated time
+    updateLastUpdated();
+});
+
+function setupEventListeners() {
+    const startBtn = document.getElementById('start-tracking');
+    const stopBtn = document.getElementById('stop-tracking');
+    const searchBtn = document.getElementById('search-services');
+    const serviceSelect = document.getElementById('service-select');
+    const tripSelect = document.getElementById('trip-select');
+    const loadTripBtn = document.getElementById('load-trip-data');
+    const vehicleSelect = document.getElementById('vehicle-ref');
+
+    if (startBtn) {
+        startBtn.addEventListener('click', startTracking);
+    }
+
+    if (stopBtn) {
+        stopBtn.addEventListener('click', stopTracking);
+    }
+
+    if (searchBtn) {
+        searchBtn.addEventListener('click', searchServices);
+    }
+
+    if (serviceSelect) {
+        serviceSelect.addEventListener('change', loadTrips);
+    }
+
+    if (loadTripBtn) {
+        loadTripBtn.addEventListener('click', loadTripData);
+    }
+
+    // Vehicle type radio button listeners
+    const vehicleTypeRadios = document.querySelectorAll('input[name="vehicle-type"]');
+    vehicleTypeRadios.forEach(radio => {
+        radio.addEventListener('change', handleVehicleTypeChange);
+    });
+
+    if (vehicleSelect) {
+        vehicleSelect.addEventListener('change', validateForm);
+    }
+
+    const customVehicleInput = document.getElementById('custom-vehicle-ref');
+    if (customVehicleInput) {
+        customVehicleInput.addEventListener('input', validateForm);
+    }
+
+    // Add validation listeners for required fields
+    ['line-ref', 'direction-ref'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', validateForm);
+            field.addEventListener('change', validateForm);
+        }
+    });
+}
+
+function startLocationTracking() {
+    if ('geolocation' in navigator) {
+        const options = {
+            enableHighAccuracy: true,  // Request GPS accuracy
+            timeout: 3000,             // Faster timeout for quicker updates
+            maximumAge: 1000           // Accept positions up to 1 second old
+        };
+
+        watchId = navigator.geolocation.watchPosition(
+            handlePositionUpdate,
+            handlePositionError,
+            options
+        );
+    } else {
+        document.getElementById('current-position').textContent = 'Geolocation not supported';
+    }
+}
+
+function handlePositionUpdate(position) {
+    currentPosition = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed
+    };
+
+    document.getElementById('current-position').textContent =
+        `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
+    document.getElementById('accuracy').textContent =
+        `Accuracy: ${currentPosition.accuracy.toFixed(1)} meters`;
+
+    // Update user marker on map
+    updateUserMarker();
+
+    // Send position update if tracking is active
+    if (document.getElementById('stop-tracking')) {
+        sendPositionUpdate();
+    }
+}
+
+function handlePositionError(error) {
+    document.getElementById('current-position').textContent = `Location error: ${error.message}`;
+}
+
+function updateUserMarker() {
+    if (!currentPosition) return;
+
+    if (userMarker) {
+        dashboardMap.removeLayer(userMarker);
+    }
+
+    userMarker = L.marker([currentPosition.latitude, currentPosition.longitude])
+        .addTo(dashboardMap)
+        .bindPopup('Your current position');
+
+    dashboardMap.setView([currentPosition.latitude, currentPosition.longitude], 15);
+}
+
+function handleVehicleTypeChange() {
+    const vehicleType = document.querySelector('input[name="vehicle-type"]:checked').value;
+    const predefinedSection = document.getElementById('predefined-vehicle-section');
+    const customSection = document.getElementById('custom-vehicle-section');
+
+    if (vehicleType === 'predefined') {
+        predefinedSection.style.display = 'block';
+        customSection.style.display = 'none';
+        document.getElementById('custom-vehicle-ref').value = '';
+    } else {
+        predefinedSection.style.display = 'none';
+        customSection.style.display = 'block';
+        document.getElementById('vehicle-ref').value = '';
+    }
+
+    validateForm();
+}
+
+function validateForm() {
+    const vehicleType = document.querySelector('input[name="vehicle-type"]:checked').value;
+    let vehicleRef = '';
+
+    if (vehicleType === 'predefined') {
+        vehicleRef = document.getElementById('vehicle-ref').value.trim();
+    } else {
+        vehicleRef = document.getElementById('custom-vehicle-ref').value.trim();
+    }
+
+    const lineRef = document.getElementById('line-ref').value.trim();
+    const directionRef = document.getElementById('direction-ref').value.trim();
+    const startBtn = document.getElementById('start-tracking');
+
+    const isValid = vehicleRef && lineRef && directionRef;
+    startBtn.disabled = !isValid;
+
+    return isValid;
+}
+
+function searchServices() {
+    const operator = document.getElementById('service-search').value.trim() || 'NCTR';
+    const serviceResults = document.getElementById('service-results');
+    const serviceSelect = document.getElementById('service-select');
+
+    fetch(`{% url "tracker:get_services" %}?operator=${encodeURIComponent(operator)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                serviceSelect.innerHTML = '<option value="">Select a service...</option>';
+                data.services.forEach(service => {
+                    const option = document.createElement('option');
+                    option.value = service.id;
+                    option.textContent = service.display_name;
+                    serviceSelect.appendChild(option);
+                });
+                serviceResults.style.display = 'block';
+                document.getElementById('trip-results').style.display = 'none';
+            } else {
+                alert('Error loading services: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading services');
+        });
+}
+
+function loadTrips() {
+    const serviceId = document.getElementById('service-select').value;
+    const tripResults = document.getElementById('trip-results');
+    const tripSelect = document.getElementById('trip-select');
+
+    if (!serviceId) {
+        tripResults.style.display = 'none';
+        return;
+    }
+
+    fetch(`{% url "tracker:get_trips" %}?service_id=${serviceId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                tripSelect.innerHTML = '<option value="">Select a trip...</option>';
+                data.trips.forEach(trip => {
+                    const option = document.createElement('option');
+                    option.value = trip.vehicle_journey_code;
+                    option.textContent = trip.display_name;
+                    option.dataset.serviceId = serviceId;
+                    tripSelect.appendChild(option);
+                });
+                tripResults.style.display = 'block';
+            } else {
+                alert('Error loading trips: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading trips');
+        });
+}
+
+function loadTripData() {
+    const tripSelect = document.getElementById('trip-select');
+    const selectedOption = tripSelect.options[tripSelect.selectedIndex];
+
+    if (!selectedOption || !selectedOption.value) {
+        alert('Please select a trip first');
+        return;
+    }
+
+    const serviceId = selectedOption.dataset.serviceId;
+    const vehicleJourneyCode = selectedOption.value;
+
+    fetch(`{% url "tracker:load_trip_data" %}?service_id=${serviceId}&vehicle_journey_code=${encodeURIComponent(vehicleJourneyCode)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateFormFields(data.journey_data);
+                alert('Trip data loaded successfully!');
+            } else {
+                alert('Error loading trip data: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading trip data');
+        });
+}
+
+function populateFormFields(journeyData) {
+    // Populate form fields with loaded trip data
+    const fields = {
+        'line-ref': journeyData.line_ref,
+        'operator-ref': journeyData.operator_ref,
+        'block-ref': journeyData.block_ref,
+        'vehicle-journey-ref': journeyData.vehicle_journey_ref,
+        'origin-ref': journeyData.origin_ref,
+        'origin-name': journeyData.origin_name,
+        'destination-ref': journeyData.destination_ref,
+        'destination-name': journeyData.destination_name
+    };
+
+    Object.keys(fields).forEach(fieldId => {
+        const element = document.getElementById(fieldId);
+        if (element && fields[fieldId]) {
+            element.value = fields[fieldId];
+        }
+    });
+
+    // Set direction if available
+    if (journeyData.direction_ref) {
+        const directionSelect = document.getElementById('direction-ref');
+        directionSelect.value = journeyData.direction_ref.toLowerCase();
+    }
+
+    validateForm();
+}
+
+function startTracking() {
+    if (!validateForm()) {
+        alert('Please fill in all required fields');
+        return;
+    }
+
+    const vehicleType = document.querySelector('input[name="vehicle-type"]:checked').value;
+    let vehicleRef = '';
+
+    if (vehicleType === 'predefined') {
+        vehicleRef = document.getElementById('vehicle-ref').value.trim();
+    } else {
+        vehicleRef = document.getElementById('custom-vehicle-ref').value.trim();
+    }
+
+    const formData = {
+        vehicle_ref: vehicleRef,
+        vehicle_type: vehicleType,  // Track whether this is predefined or custom
+        line_ref: document.getElementById('line-ref').value.trim(),
+        direction_ref: document.getElementById('direction-ref').value.trim(),
+        operator_ref: document.getElementById('operator-ref').value.trim() || 'UNKNOWN',
+        block_ref: document.getElementById('block-ref').value.trim() || '',
+        vehicle_journey_ref: document.getElementById('vehicle-journey-ref').value.trim() || `journey_${Date.now()}`,
+        origin_ref: document.getElementById('origin-ref').value.trim() || '',
+        origin_name: document.getElementById('origin-name').value.trim() || '',
+        destination_ref: document.getElementById('destination-ref').value.trim() || '',
+        destination_name: document.getElementById('destination-name').value.trim() || '',
+        occupancy: document.getElementById('occupancy').value.trim() || null
+    };
+
+    fetch('{% url "tracker:start_tracking" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Reload to show tracking UI
+        } else {
+            alert('Error starting tracking: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error starting tracking');
+    });
+}
+
+function stopTracking() {
+    fetch('{% url "tracker:stop_tracking" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Reload to show stopped UI
+        } else {
+            alert('Error stopping tracking: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error stopping tracking');
+    });
+}
+
+function sendPositionUpdate() {
+    if (!currentPosition) return;
+
+    const positionData = {
+        longitude: currentPosition.longitude,
+        latitude: currentPosition.latitude,
+        bearing: currentPosition.heading || 0,
+        velocity: currentPosition.speed || 0,
+        line_ref: document.getElementById('line-ref')?.value || 'UNKNOWN',
+        direction_ref: document.getElementById('direction-ref')?.value || 'outbound',
+        published_line_name: document.getElementById('line-ref')?.value || 'Self-tracked Route',
+        operator_ref: document.getElementById('operator-ref')?.value || 'UNKNOWN',
+        origin_ref: document.getElementById('origin-ref')?.value || 'UNKNOWN',
+        origin_name: document.getElementById('origin-name')?.value || 'Current Location',
+        destination_ref: document.getElementById('destination-ref')?.value || 'UNKNOWN',
+        destination_name: document.getElementById('destination-name')?.value || '',
+        block_ref: document.getElementById('block-ref')?.value || 'SELF_TRACK',
+        vehicle_journey_ref: document.getElementById('vehicle-journey-ref')?.value || `journey_${Date.now()}`,
+        occupancy: document.getElementById('occupancy')?.value || null
+    };
+
+    fetch('{% url "tracker:update_position" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(positionData)
+    })
+    .catch(error => {
+        console.error('Error sending position update:', error);
+    });
+}
+
+function updateLastUpdated() {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString();
+    document.getElementById('last-updated').textContent = `Last updated: ${timeString}`;
+}
+
+function updateMap() {
+    // Update other vehicles on map
+    fetch('{% url "tracker:get_vehicles" %}')
+        .then(response => response.json())
+        .then(data => {
+            // Update other vehicle markers (excluding user's own position)
+            // Implementation would go here
+            updateLastUpdated();
+        })
+        .catch(error => {
+            console.error('Error updating map:', error);
+        });
+}
+</script>
+{% endblock %}

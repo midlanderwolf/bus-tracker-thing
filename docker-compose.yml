@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # New dashboard/API database
+  dashboard_db:
+    image: postgres:15
+    container_name: dashboard_db
+    environment:
+      POSTGRES_DB: dashboard
+      POSTGRES_USER: dashboard_user
+      POSTGRES_PASSWORD: dashboard_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - dashboard_data:/var/lib/postgresql/data
+      - ./init-dashboard.sql:/docker-entrypoint-initdb.d/init-dashboard.sql
+    networks:
+      - ticketer_network
+
+  # SiriVM API service
+  api:
+    build: ./api
+    container_name: sirivm_api
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=postgresql://dashboard_user:dashboard_password@dashboard_db:5432/dashboard
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - dashboard_db
+      - redis
+    networks:
+      - ticketer_network
+    volumes:
+      - ./api:/app
+
+  # Django dashboard
+  dashboard:
+    build: ./dashboard
+    container_name: ticketer_dashboard
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://dashboard_user:dashboard_password@dashboard_db:5432/dashboard
+      - BUSTIMES_DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/postgres
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=django-insecure-dev-key-change-in-production
+      - DEBUG=True
+    depends_on:
+      - dashboard_db
+      - redis
+    networks:
+      - ticketer_network
+    volumes:
+      - ./dashboard:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: ticketer_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ticketer_network
+
+volumes:
+  dashboard_data:
+
+networks:
+  ticketer_network:
+    driver: bridge

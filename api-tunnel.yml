@@ -1,0 +1,7 @@
+tunnel: api-tunnel
+credentials-file: /root/.cloudflared/daf18691-74bd-4040-8749-ec89c6dc4a3f.json
+
+ingress:
+  - hostname: api.midlandbus.uk
+    service: http://localhost:3002
+  - service: http_status:404

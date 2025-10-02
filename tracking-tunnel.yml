@@ -1,0 +1,7 @@
+tunnel: tracking-tunnel
+credentials-file: /root/.cloudflared/7466bc88-8543-485a-9fb5-79ccba087799.json
+
+ingress:
+  - hostname: tracking.midlandbus.uk
+    service: http://localhost:3001
+  - service: http_status:404

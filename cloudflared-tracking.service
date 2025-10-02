@@ -1,0 +1,13 @@
+[Unit]
+Description=Cloudflare Tunnel for Tracking Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/cloudflared tunnel --config /home/mark/ticketer-tracker/tracking-tunnel.yml run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

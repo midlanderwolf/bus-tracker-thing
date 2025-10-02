@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Bus Tracking{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Live Bus Tracking</h1>
+        <div id="map" class="rounded shadow"></div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">How it works</h5>
+            </div>
+            <div class="card-body">
+                <p>This system shows real-time bus positions from our BODS-compliant API.</p>
+                <p>Users can also self-track their position to appear as vehicles on the map.</p>
+                {% if not user.is_authenticated %}
+                    <p><a href="{% url 'tracker:login' %}" class="btn btn-primary">Login to start tracking</a></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">API Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>SIRI-VM API:</strong> <a href="http://localhost:3002/siri-vm" target="_blank">http://localhost:3002/siri-vm</a></p>
+                <p><strong>Dashboard:</strong> <a href="http://localhost:3001" target="_blank">http://localhost:3001</a></p>
+                <p>Data updates every 10 seconds minimum.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let map;
+let vehicleMarkers = {};
+let updateInterval;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map
+    map = L.map('map').setView([51.505, -0.09], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Start updating vehicle positions
+    updateVehicles();
+    updateInterval = setInterval(updateVehicles, 10000); // Update every 10 seconds
+});
+
+function updateVehicles() {
+    fetch('{% url "tracker:get_vehicles" %}')
+        .then(response => response.json())
+        .then(data => {
+            if (data.vehicles) {
+                updateVehicleMarkers(data.vehicles);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching vehicles:', error);
+        });
+}
+
+function updateVehicleMarkers(vehicles) {
+    // Clear old markers
+    Object.values(vehicleMarkers).forEach(marker => map.removeLayer(marker));
+    vehicleMarkers = {};
+
+    vehicles.forEach(vehicle => {
+        const marker = L.marker([vehicle.latitude, vehicle.longitude])
+            .addTo(map)
+            .bindPopup(`
+                <strong>Vehicle: ${vehicle.vehicle_ref}</strong><br>
+                Route: ${vehicle.line_ref}<br>
+                Bearing: ${vehicle.bearing}°<br>
+                Last updated: ${new Date(vehicle.recorded_at_time).toLocaleTimeString()}
+            `);
+
+        vehicleMarkers[vehicle.vehicle_ref] = marker;
+    });
+
+    // Fit map to show all vehicles
+    if (vehicles.length > 0) {
+        const group = new L.featureGroup(Object.values(vehicleMarkers));
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+}
+</script>
+{% endblock %}
