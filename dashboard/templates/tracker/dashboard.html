@@ -323,8 +323,12 @@ function handlePositionUpdate(position) {
         speed: position.coords.speed
     };
 
+    const bearingText = currentPosition.heading !== null && currentPosition.heading !== undefined
+        ? `, Bearing: ${currentPosition.heading.toFixed(1)}°`
+        : '';
+
     document.getElementById('current-position').textContent =
-        `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}`;
+        `${currentPosition.latitude.toFixed(6)}, ${currentPosition.longitude.toFixed(6)}${bearingText}`;
     document.getElementById('accuracy').textContent =
         `Accuracy: ${currentPosition.accuracy.toFixed(1)} meters`;
 
@@ -587,11 +591,19 @@ function stopTracking() {
 function sendPositionUpdate() {
     if (!currentPosition) return;
 
+    // Only include bearing if it's actually available and accurate
+    let bearing = null;
+    if (currentPosition.heading !== null && currentPosition.heading !== undefined &&
+        currentPosition.accuracy < 50) { // Only use bearing if position accuracy is good
+        bearing = Math.round(currentPosition.heading * 100) / 100; // Round to 2 decimal places
+    }
+
     const positionData = {
-        longitude: currentPosition.longitude,
-        latitude: currentPosition.latitude,
-        bearing: currentPosition.heading || 0,
-        velocity: currentPosition.speed || 0,
+        longitude: Math.round(currentPosition.longitude * 1000000) / 1000000, // 6 decimal places
+        latitude: Math.round(currentPosition.latitude * 1000000) / 1000000,  // 6 decimal places
+        bearing: bearing,
+        velocity: currentPosition.speed ? Math.round(currentPosition.speed * 100) / 100 : null, // m/s with 2 decimals
+        accuracy: Math.round(currentPosition.accuracy * 10) / 10, // 1 decimal place
         line_ref: document.getElementById('line-ref')?.value || 'UNKNOWN',
         direction_ref: document.getElementById('direction-ref')?.value || 'outbound',
         published_line_name: document.getElementById('line-ref')?.value || 'Self-tracked Route',

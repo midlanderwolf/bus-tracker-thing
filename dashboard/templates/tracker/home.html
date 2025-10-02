@@ -78,12 +78,16 @@ function updateVehicleMarkers(vehicles) {
     vehicleMarkers = {};
 
     vehicles.forEach(vehicle => {
+        const bearingText = vehicle.bearing !== null && vehicle.bearing !== undefined
+            ? `${vehicle.bearing}°`
+            : 'Not available';
+
         const marker = L.marker([vehicle.latitude, vehicle.longitude])
             .addTo(map)
             .bindPopup(`
                 <strong>Vehicle: ${vehicle.vehicle_ref}</strong><br>
                 Route: ${vehicle.line_ref}<br>
-                Bearing: ${vehicle.bearing}°<br>
+                Bearing: ${bearingText}<br>
                 Last updated: ${new Date(vehicle.recorded_at_time).toLocaleTimeString()}
             `);
 

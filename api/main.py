@@ -38,7 +38,7 @@ class MonitoredVehicleJourney(BaseModel):
     origin_aimed_departure_time: Optional[datetime] = None
     destination_aimed_arrival_time: Optional[datetime] = None
     vehicle_location: VehicleLocation
-    bearing: float
+    bearing: Optional[float] = None
     velocity: Optional[float] = None
     occupancy: Optional[str] = None
     block_ref: str
@@ -116,7 +116,8 @@ def create_siri_xml(service_delivery: ServiceDelivery) -> str:
         ET.SubElement(location, "Longitude").text = str(activity.monitored_vehicle_journey.vehicle_location.longitude)
         ET.SubElement(location, "Latitude").text = str(activity.monitored_vehicle_journey.vehicle_location.latitude)
 
-        ET.SubElement(mvj, "Bearing").text = str(activity.monitored_vehicle_journey.bearing)
+        if activity.monitored_vehicle_journey.bearing is not None:
+            ET.SubElement(mvj, "Bearing").text = str(activity.monitored_vehicle_journey.bearing)
 
         if activity.monitored_vehicle_journey.velocity:
             ET.SubElement(mvj, "Velocity").text = str(activity.monitored_vehicle_journey.velocity)
@@ -414,7 +415,7 @@ def store_vehicle_position(data):
                 data['vehicle_ref'], data['line_ref'], data['direction_ref'],
                 data['published_line_name'], data['operator_ref'], data['origin_ref'],
                 data['origin_name'], data['destination_ref'], data.get('destination_name'),
-                data['longitude'], data['latitude'], data['bearing'],
+                data['longitude'], data['latitude'], data.get('bearing'),
                 data.get('velocity'), data.get('occupancy'), data['block_ref'],
                 data['vehicle_journey_ref'], data['recorded_at_time'], data['valid_until_time']
             ))

@@ -238,7 +238,7 @@ def update_position(request):
             destination_name=journey_config.get('destination_name', data.get('destination_name')),
             longitude=data['longitude'],
             latitude=data['latitude'],
-            bearing=data.get('bearing', 0),
+            bearing=data.get('bearing'),  # Allow None/null values
             velocity=data.get('velocity'),
             occupancy=journey_config.get('occupancy', data.get('occupancy')),
             block_ref=journey_config.get('block_ref', data.get('block_ref', 'UNKNOWN')),
@@ -260,7 +260,7 @@ def update_position(request):
             'destination_name': position.destination_name,
             'longitude': float(position.longitude),
             'latitude': float(position.latitude),
-            'bearing': float(position.bearing),
+            'bearing': float(position.bearing) if position.bearing is not None else None,
             'velocity': float(position.velocity) if position.velocity else None,
             'occupancy': position.occupancy,
             'block_ref': position.block_ref,
@@ -323,7 +323,7 @@ def get_vehicles(request):
                     'line_ref': pos.line_ref,
                     'latitude': float(pos.latitude),
                     'longitude': float(pos.longitude),
-                    'bearing': float(pos.bearing),
+                    'bearing': float(pos.bearing) if pos.bearing is not None else None,
                     'occupancy': pos.occupancy,
                     'recorded_at_time': pos.recorded_at_time.isoformat(),
                 })

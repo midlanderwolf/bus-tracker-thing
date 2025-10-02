@@ -74,7 +74,7 @@ class VehiclePosition(models.Model):
     # Location data
     longitude = models.DecimalField(max_digits=10, decimal_places=7)
     latitude = models.DecimalField(max_digits=10, decimal_places=7)
-    bearing = models.DecimalField(max_digits=5, decimal_places=2, help_text="Direction in degrees")
+    bearing = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Direction in degrees")
     velocity = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Speed in m/s")
     occupancy = models.CharField(max_length=20, choices=OCCUPANCY_CHOICES, null=True, blank=True)
 
